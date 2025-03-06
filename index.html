@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="manifest" href="manifest.json"/>
+    <meta name="theme-color" content="#ffffff"/>
+
   <title>Sopa de Letras</title>
   <style>
     body {
@@ -99,7 +102,15 @@
   <div id="tiempo">Tiempo: 0 s</div>
   <button id="reiniciar">Reiniciar Juego</button>
   <div id="tablero"></div>
-
+  <script>
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+              .then(() => console.log('Service Worker registrado correctamente.'))
+              .catch(err => console.log('Fallo al registrar el Service Worker:', err));
+          });
+        }
+      </script>
   <script>
 // Sopa de Letras - PWA (Actualizado)
 // Permite seleccionar palabras en horizontal y vertical, confeti al descubrir palabra
