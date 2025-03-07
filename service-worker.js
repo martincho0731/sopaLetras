@@ -1,28 +1,22 @@
-const CACHE_NAME = "sopa-letras-v1";
-const URLS_A_CACHEAR = [
+const CACHE_NAME = "sopa-cache-v1";
+const URLS_TO_CACHE = [
   "./index.html",
-  "./style.css",
   "./manifest.json",
-  "./service-worker.js",
-  "./sopa_letras.js", 
-  // Agrega más archivos si lo deseas (iconos, etc.)
+  // Si tienes style.css o iconos, agrégalos aquí
 ];
 
-// Evento de instalación: caché inicial
-self.addEventListener("install", (e) => {
-  e.waitUntil(
+self.addEventListener("install", (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(URLS_A_CACHEAR);
+      return cache.addAll(URLS_TO_CACHE);
     })
   );
 });
 
-// Evento de fetch: servir desde caché si está disponible
-self.addEventListener("fetch", (e) => {
-  e.respondWith(
-    caches.match(e.request).then((respuestaCache) => {
-      // Si está en caché, lo devuelve, si no, lo pide a la red
-      return respuestaCache || fetch(e.request);
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
     })
   );
 });

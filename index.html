@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4CAF50">
+
   <link rel="stylesheet" href="styles.css">
 
   <title>Sopa de Letras</title>
@@ -21,6 +24,17 @@
     /****************************************
      * LÓGICA PRINCIPAL DE LA SOPA DE LETRAS
      ****************************************/
+     if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js")
+            .then(() => console.log("✅ Service Worker registrado correctamente."))
+            .catch((error) => console.log("❌ Error al registrar el Service Worker:", error));
+    });
+}
+
+     
+     
+     
      const filas = 10;
     const columnas = 10;
     let tablero = [];
@@ -152,18 +166,31 @@
       }, 1000);
     }
 
-    // Botón Reiniciar
-    function reiniciarJuego() {
-      clearInterval(cronometro);
-      tiempo = 0;
-      palabrasEncontradas = 0;
-      seleccionarPalabras();
-      inicializarTablero();
-      colocarPalabras();
-      rellenarTablero();
-      renderizarTablero();
-      iniciarCronometro();
+// Corrección del botón de reinicio y mejora de responsividad
+
+document.addEventListener("DOMContentLoaded", () => {
+    const botonReiniciar = document.getElementById("reiniciar");
+    if (!botonReiniciar) {
+        console.error("No se encontró el botón #reiniciar en el HTML");
+        return;
     }
+    botonReiniciar.addEventListener("click", reiniciarJuego);
+    iniciarJuego();
+});
+
+function reiniciarJuego() {
+    clearInterval(cronometro);
+    tiempo = 0;
+    palabrasEncontradas = 0;
+    document.getElementById("tiempo").textContent = `Tiempo: ${tiempo} s`;
+    seleccionarPalabras();
+    inicializarTablero();
+    colocarPalabras();
+    rellenarTablero();
+    renderizarTablero();
+    iniciarCronometro();
+}
+
 
     // Lógica de selección con mouse
     function iniciarSeleccion(e) {
