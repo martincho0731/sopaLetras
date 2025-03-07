@@ -116,3 +116,19 @@ body {
       padding: 8px 16px;
     }
   }
+
+  /* Responsividad en móviles */
+@media (max-width: 600px) {
+    #tablero {
+        grid-template-columns: repeat(10, minmax(30px, 1fr));
+        gap: 2px;
+    }
+    .celda {
+        font-size: 1.2em;
+        padding: 5px;
+    }
+    button {
+        font-size: 14px;
+        padding: 10px;
+    }
+}

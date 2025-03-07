@@ -139,20 +139,27 @@
       contenedor.style.gridTemplateColumns = `repeat(${columnas}, 1fr)`;
       contenedor.style.gap = "5px";
 
-      for (let i = 0; i < filas; i++) {
-        for (let j = 0; j < columnas; j++) {
-          const celda = document.createElement("div");
-          celda.classList.add("celda");
-          celda.textContent = tablero[i][j];
-          celda.dataset.fila = i;
-          celda.dataset.columna = j;
-          // Eventos para selección de palabras con mouse
-          celda.addEventListener("mousedown", iniciarSeleccion);
-          celda.addEventListener("mousemove", continuarSeleccion);
-          celda.addEventListener("mouseup", finalizarSeleccion);
-          contenedor.appendChild(celda);
-        }
-      }
+     for (let i = 0; i < filas; i++) {
+    for (let j = 0; j < columnas; j++) {
+        const celda = document.createElement("div");
+        celda.classList.add("celda");
+        celda.textContent = tablero[i][j];
+        celda.dataset.fila = i;
+        celda.dataset.columna = j;
+
+        // Compatibilidad con mouse y táctil
+        celda.addEventListener("mousedown", iniciarSeleccion);
+        celda.addEventListener("mousemove", continuarSeleccion);
+        celda.addEventListener("mouseup", finalizarSeleccion);
+
+        celda.addEventListener("touchstart", iniciarSeleccion, { passive: true });
+        celda.addEventListener("touchmove", continuarSeleccion, { passive: true });
+        celda.addEventListener("touchend", finalizarSeleccion);
+
+        contenedor.appendChild(celda);
+    }
+}
+
     }
 
     // Iniciar el cronómetro
@@ -270,6 +277,34 @@ function reiniciarJuego() {
       }
     `;
     document.head.appendChild(style);
+// Lógica de selección con mouse y táctil
+function iniciarSeleccion(e) {
+    seleccionando = true;
+    seleccion = [];
+    seleccionarCelda(e.target);
+}
+
+function continuarSeleccion(e) {
+    if (!seleccionando) return;
+    let elemento = document.elementFromPoint(
+        e.touches ? e.touches[0].clientX : e.clientX,
+        e.touches ? e.touches[0].clientY : e.clientY
+    );
+    if (elemento) seleccionarCelda(elemento);
+}
+
+function finalizarSeleccion() {
+    seleccionando = false;
+    verificarPalabra();
+}
+
+function seleccionarCelda(celda) {
+    if (!celda.classList.contains("celda")) return;
+    if (!seleccion.includes(celda)) {
+        celda.classList.add("resaltada");
+        seleccion.push(celda);
+    }
+}
 
     // Iniciar al cargar
     window.onload = () => {
