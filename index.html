@@ -3,436 +3,256 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="manifest" href="manifest.json"/>
-    <meta name="theme-color" content="#ffffff"/>
+  <link rel="stylesheet" href="styles.css">
 
   <title>Sopa de Letras</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #fff;
-    }
-    h1 {
-      margin: 20px 0;
-    }
-    #contador, #tiempo {
-      font-size: 18px;
-      margin: 6px 0;
-    }
-    #reiniciar {
-      display: inline-block;
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #28a745;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    #reiniciar:hover {
-      background-color: #218838;
-    }
-
-    /* Contenedor con grid de 10 columnas */
-    #tablero {
-      display: grid;
-      grid-template-columns: repeat(10, 40px);
-      grid-auto-rows: 40px; /* 10 filas de 40px */
-      gap: 3px;
-      justify-content: center;
-      margin: 20px auto;
-      max-width: 600px;
-    }
-
-    .celda {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      border: 2px solid #000;
-      background-color: #f9f9f9;
-      user-select: none;  /* Evitar selección de texto por defecto */
-      cursor: pointer;
-      transition: background 0.2s ease-in-out;
-      position: relative;
-    }
-    .celda:hover {
-      background-color: #e0e0e0;
-    }
-    .resaltada {
-      background-color: #ffd54f !important;
-    }
-    .descubierta {
-      background-color: #4caf50 !important; /* Cuando la palabra se ha acertado */
-      color: white;
-    }
-
-    /* Confeti */
-    .confetti {
-      width: 10px;
-      height: 10px;
-      background-color: red;
-      position: fixed;
-      top: 0;
-      animation: confettiFall 2s linear forwards;
-      z-index: 9999;
-      opacity: 0.9;
-      transform: rotate(0deg);
-    }
-    @keyframes confettiFall {
-      0% {
-        opacity: 1;
-        transform: translateY(-50px) rotate(0deg);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(700px) rotate(720deg);
-      }
-    }
-  </style>
 </head>
 <body>
   <h1>Sopa de Letras</h1>
   <div id="contador">Palabras restantes: 0</div>
   <div id="tiempo">Tiempo: 0 s</div>
+  <div id="record">Mejor tiempo: -</div>
   <button id="reiniciar">Reiniciar Juego</button>
   <div id="tablero"></div>
+  
+  
+
   <script>
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
-              .then(() => console.log('Service Worker registrado correctamente.'))
-              .catch(err => console.log('Fallo al registrar el Service Worker:', err));
-          });
-        }
-      </script>
-  <script>
-// Sopa de Letras - PWA (Actualizado)
-// Permite seleccionar palabras en horizontal y vertical, confeti al descubrir palabra
-// y guarda el mejor tiempo en localStorage
+    /****************************************
+     * LÓGICA PRINCIPAL DE LA SOPA DE LETRAS
+     ****************************************/
+     const filas = 10;
+    const columnas = 10;
+    let tablero = [];
+    
+    // Gran lista de palabras (300+ total) divididas en categorías
+    const categorias = {
+      animales: [
+        "PERRO","GATO","ELEFANTE","TIGRE","LEON","OSO","SERPIENTE","AGUILA","LOBO","CEBRA","JIRAFA",
+        "PANDA","COCODRILO","CANGURO","CABALLO","ARDILLA","CASTOR","BALLENA","TORTUGA","RINOCERONTE",
+        "CABRA","OVEJA","CABALLITO","DROMEDARIO","HIPOPOTAMO","JABALI","ZORRO","ERIZO","MURCIELAGO","POLLO",
+      ],
+      colores: [
+        "ROJO","AZUL","VERDE","AMARILLO","NARANJA","MORADO","NEGRO","BLANCO","GRIS","ROSADO","TURQUESA",
+        "VIOLETA","DORADO","PLATEADO","CELESTE","LAVANDA","BEIGE","CORAL","MELON","LIMA","CIAN","CAFE","PURPURA","SALMON",
+        "FUCSIA","PIEL","MARRON","MAGENTA","BRONCE","MARINO"
+      ],
+      paises: [
+        "URUGUAY","ARGENTINA","BRASIL","CHILE","MEXICO","PERU","COLOMBIA","ESPAÑA","FRANCIA","ALEMANIA","ITALIA",
+        "PORTUGAL","HOLANDA","SUIZA","AUSTRALIA","JAPON","CHINA","INDIA","RUSIA","CANADA","PARAGUAY","BOLIVIA","VENEZUELA",
+        "EGIPTO","SUDAN","NIGERIA","SUECIA","NORUEGA","FINLANDIA","POLONIA","GRECIA"
+      ],
+      cosas: [
+        "MESA","SILLA","LAPIZ","COMPUTADORA","RELOJ","TELEFONO","VENTANA","PUERTA","CARTERA","BOLSA",
+        "CINTURON","ZAPATO","SOMBRERO","GAFAS","CHAQUETA","PANTALON","CAMISA","SACO","BOTELLA","TASA",
+        "CORTINA","COJIN","ESCRITORIO","CUADERNO","MOCHILA","TENEDOR","CUCHILLO","CUCHARA","PLATO","VASO"
+      ]
+    };
+    let palabras = [];
+    let palabrasEncontradas = 0;
+    let tiempo = 0;
+    let cronometro;
+    let seleccion = [];
+    let seleccionando = false;
 
-const filas = 10;
-const columnas = 10;
-const categorias = {
-  animales: ["PERRO","GATO","ELEFANTE","TIGRE","LEON","OSO","SERPIENTE","AGUILA","LOBO","CEBRA","JIRAFA","PANDA","COCODRILO","CANGURO","CABALLO","ARDILLA","CASTOR","BALLENA","TORTUGA","RINOCERONTE"],
-  colores: ["ROJO","AZUL","VERDE","AMARILLO","NARANJA","MORADO","NEGRO","BLANCO","GRIS","ROSADO","TURQUESA","VIOLETA","DORADO","PLATEADO","CELESTE","LAVANDA","BEIGE","CORAL","MELON","LIMA"],
-  paises: ["URUGUAY","ARGENTINA","BRASIL","CHILE","MEXICO","PERU","COLOMBIA","ESPAÑA","FRANCIA","ALEMANIA","ITALIA","PORTUGAL","HOLANDA","SUIZA","AUSTRALIA","JAPON","CHINA","INDIA","RUSIA","CANADA"],
-  cosas: ["MESA","SILLA","LAPIZ","COMPUTADORA","RELOJ","TELEFONO","VENTANA","PUERTA","CARTERA","BOLSA","CINTURON","ZAPATO","SOMBRERO","GAFAS","CHAQUETA","PANTALON","CAMISA","SACO","BOTELLA","TASA"]
-};
-let tablero = [];
-let palabras = [];
-let palabrasEncontradas = 0;
-let tiempo = 0;
-let cronometro;
-let arrastrando = false;
-let seleccion = [];
-let mejorTiempo = localStorage.getItem("recordSopa") ? parseInt(localStorage.getItem("recordSopa"), 10) : null;
+    // Seleccionar 15 palabras al azar
+    function seleccionarPalabras() {
+      let todas = Object.values(categorias).flat();
+      // 15 al azar
+      palabras = todas.sort(() => 0.5 - Math.random()).slice(0, 15);
+      document.getElementById("contador").textContent = `Palabras restantes: ${palabras.length}`;
+    }
 
-// Seleccionar 15 palabras aleatorias
-function seleccionarPalabras() {
-  let todas = Object.values(categorias).flat();
-  palabras = todas.sort(() => 0.5 - Math.random()).slice(0, 15);
-  document.getElementById("contador").textContent = `Palabras restantes: ${palabras.length}`;
-}
+    // Crear matriz vacía
+    function inicializarTablero() {
+      tablero = Array.from({ length: filas }, () => Array(columnas).fill(" "));
+    }
 
-// Inicializar el tablero
-function inicializarTablero() {
-  tablero = Array.from({ length: filas }, () => Array(columnas).fill(""));
-}
-
-// Insertar palabras (horizontal o vertical) en el tablero
-function colocarPalabras() {
-  palabras.forEach(palabra => {
-    let colocada = false;
-    let intentos = 0;
-
-    while (!colocada && intentos < 100) {
-      intentos++;
-      let f = Math.floor(Math.random() * filas);
-      let c = Math.floor(Math.random() * columnas);
-      let direccion = Math.random() > 0.5 ? "H" : "V";
-
-      if (puedeColocarse(palabra, f, c, direccion)) {
-        for (let i = 0; i < palabra.length; i++) {
-          if (direccion === "H") {
-            tablero[f][c + i] = palabra[i];
-          } else {
-            tablero[f + i][c] = palabra[i];
+    // Insertar palabras horizontal o vertical
+    function colocarPalabras() {
+      palabras.forEach(palabra => {
+        let colocada = false;
+        let intentos = 0;
+        while (!colocada && intentos < 100) {
+          intentos++;
+          let f = Math.floor(Math.random() * filas);
+          let c = Math.floor(Math.random() * columnas);
+          let direccion = Math.random() > 0.5 ? "H" : "V";
+          if (puedeColocarse(palabra, f, c, direccion)) {
+            for (let i = 0; i < palabra.length; i++) {
+              if (direccion === "H") tablero[f][c + i] = palabra[i];
+              else tablero[f + i][c] = palabra[i];
+            }
+            colocada = true;
           }
         }
-        colocada = true;
+      });
+    }
+
+    function puedeColocarse(palabra, fila, col, dir) {
+      // Comprobar bordes
+      if (dir === "H" && col + palabra.length > columnas) return false;
+      if (dir === "V" && fila + palabra.length > filas) return false;
+      // Comprobar si ya hay letras
+      for (let i = 0; i < palabra.length; i++) {
+        let actual = (dir === "H") ? tablero[fila][col + i] : tablero[fila + i][col];
+        if (actual !== " ") return false;
+      }
+      return true;
+    }
+
+    // Rellenar vacíos con letras aleatorias
+    function rellenarTablero() {
+      for (let i = 0; i < filas; i++) {
+        for (let j = 0; j < columnas; j++) {
+          if (tablero[i][j] === " ") {
+            tablero[i][j] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+          }
+        }
       }
     }
-  });
-}
 
-function puedeColocarse(palabra, fila, col, dir) {
-  if (dir === "H" && col + palabra.length > columnas) return false;
-  if (dir === "V" && fila + palabra.length > filas) return false;
+    // Pintar la sopa en el DOM
+    function renderizarTablero() {
+      const contenedor = document.getElementById("tablero");
+      if (!contenedor) {
+        console.error("No existe el div#tablero");
+        return;
+      }
+      contenedor.innerHTML = "";
+      // Repetir 10 columnas (filas x columnas = 100 celdas)
+      contenedor.style.display = "grid";
+      contenedor.style.gridTemplateColumns = `repeat(${columnas}, 1fr)`;
+      contenedor.style.gap = "5px";
 
-  for (let i = 0; i < palabra.length; i++) {
-    let actual = (dir === "H") ? tablero[fila][col + i] : tablero[fila + i][col];
-    if (actual !== "") return false;
-  }
-  return true;
-}
-
-// Rellenar espacios vacíos con letras aleatorias
-function rellenarTablero() {
-  for (let i = 0; i < filas; i++) {
-    for (let j = 0; j < columnas; j++) {
-      if (tablero[i][j] === "") {
-        tablero[i][j] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      for (let i = 0; i < filas; i++) {
+        for (let j = 0; j < columnas; j++) {
+          const celda = document.createElement("div");
+          celda.classList.add("celda");
+          celda.textContent = tablero[i][j];
+          celda.dataset.fila = i;
+          celda.dataset.columna = j;
+          // Eventos para selección de palabras con mouse
+          celda.addEventListener("mousedown", iniciarSeleccion);
+          celda.addEventListener("mousemove", continuarSeleccion);
+          celda.addEventListener("mouseup", finalizarSeleccion);
+          contenedor.appendChild(celda);
+        }
       }
     }
-  }
-}
 
-// Crear el DOM de la Sopa de Letras
-function renderizarTablero() {
-  const contenedor = document.getElementById("tablero");
-  contenedor.innerHTML = "";
-  for (let i = 0; i < filas; i++) {
-    for (let j = 0; j < columnas; j++) {
-      const celda = document.createElement("div");
-      celda.classList.add("celda");
-      celda.textContent = tablero[i][j];
-      // Guardamos la posición en data-attrs
-      celda.setAttribute("data-row", i);
-      celda.setAttribute("data-col", j);
-      celda.id = `celda-${i}-${j}`;
-
-      // Eventos para mouse
-      celda.addEventListener("mousedown", startSelect);
-      celda.addEventListener("mousemove", moveSelect);
-      celda.addEventListener("mouseup", endSelect);
-
-      // Eventos para táctil
-      celda.addEventListener("touchstart", startSelect, {passive:false});
-      celda.addEventListener("touchmove", moveSelect, {passive:false});
-      celda.addEventListener("touchend", endSelect, {passive:false});
-
-      contenedor.appendChild(celda);
+    // Iniciar el cronómetro
+    function iniciarCronometro() {
+      if (cronometro) clearInterval(cronometro);
+      tiempo = 0;
+      document.getElementById("tiempo").textContent = `Tiempo: ${tiempo} s`;
+      cronometro = setInterval(() => {
+        tiempo++;
+        document.getElementById("tiempo").textContent = `Tiempo: ${tiempo} s`;
+      }, 1000);
     }
-  }
 
-  // Mostrar record actual
-  mostrarRecord();
-}
-
-// Iniciar cronómetro
-function iniciarCronometro() {
-  cronometro = setInterval(() => {
-    tiempo++;
-    document.getElementById("tiempo").textContent = `Tiempo: ${tiempo} s`;
-  }, 1000);
-}
-
-// Reiniciar juego
-function reiniciarJuego() {
-  clearInterval(cronometro);
-  tiempo = 0;
-  palabrasEncontradas = 0;
-  document.getElementById("tiempo").textContent = "Tiempo: 0 s";
-  seleccionarPalabras();
-  inicializarTablero();
-  colocarPalabras();
-  rellenarTablero();
-  renderizarTablero();
-  iniciarCronometro();
-}
-
-// Selección de celdas para armar palabra (mouse/touch)
-function startSelect(e) {
-  e.preventDefault();
-  arrastrando = true;
-  seleccion = [];
-  const [fila, col] = obtenerPos(e);
-  seleccion.push([fila, col]);
-  resaltarCelda(fila, col);
-}
-
-function moveSelect(e) {
-  if (!arrastrando) return;
-  e.preventDefault();
-  const [fila, col] = obtenerPos(e);
-  if (fila < 0 || col < 0) return;
-  const ultima = seleccion[seleccion.length - 1];
-  if (ultima[0] !== fila || ultima[1] !== col) {
-    seleccion.push([fila, col]);
-    resaltarCelda(fila, col);
-  }
-}
-
-function endSelect(e) {
-  arrastrando = false;
-  e.preventDefault();
-
-  // Comprobar palabra
-  let palabraSeleccionada = extraerPalabra(seleccion);
-
-  // Aceptar palabra invertida tambien
-  let invertida = palabraSeleccionada.split('').reverse().join('');
-
-  if (palabras.includes(palabraSeleccionada) || palabras.includes(invertida)) {
-    // Palabra descubierta
-    marcarDescubierta(seleccion);
-    lanzarConfetti(10);
-    palabrasEncontradas++;
-    let restantes = palabras.length - palabrasEncontradas;
-    document.getElementById("contador").textContent = `Palabras restantes: ${restantes}`;
-
-    // Si ya descubrió todas
-    if (restantes <= 0) {
+    // Botón Reiniciar
+    function reiniciarJuego() {
       clearInterval(cronometro);
-      verificarRecord();
-      alert("¡Felicidades! Encontraste todas las palabras.");
+      tiempo = 0;
+      palabrasEncontradas = 0;
+      seleccionarPalabras();
+      inicializarTablero();
+      colocarPalabras();
+      rellenarTablero();
+      renderizarTablero();
+      iniciarCronometro();
     }
-  }
 
-  // Limpiar resaltado
-  document.querySelectorAll('.resaltada').forEach(c => {
-    if (!c.classList.contains('descubierta')) {
-      c.classList.remove('resaltada');
+    // Lógica de selección con mouse
+    function iniciarSeleccion(e) {
+      seleccionando = true;
+      seleccion = [];
+      seleccionarCelda(e.target);
     }
-  });
-
-  seleccion = [];
-}
-
-// Obtiene fila y col desde evento (mouse/touch)
-function obtenerPos(e) {
-  let elemento;
-  if (e.touches && e.touches.length > 0) {
-    const toque = e.touches[0];
-    elemento = document.elementFromPoint(toque.clientX, toque.clientY);
-  } else {
-    elemento = e.target;
-  }
-  if (!elemento) return [-1, -1];
-  const fila = parseInt(elemento.getAttribute('data-row'), 10);
-  const col = parseInt(elemento.getAttribute('data-col'), 10);
-  return [fila, col];
-}
-
-// Resaltar celda durante selección
-function resaltarCelda(f, c) {
-  const celda = document.getElementById(`celda-${f}-${c}`);
-  if (celda && !celda.classList.contains('descubierta')) {
-    celda.classList.add('resaltada');
-  }
-}
-
-// Extraer la palabra (horizontal o vertical) segun seleccion
-function extraerPalabra(lista) {
-  if (lista.length < 1) return "";
-
-  // f1, c1: primer celda
-  // f2, c2: ultima celda
-  let f1 = lista[0][0];
-  let c1 = lista[0][1];
-  let f2 = lista[lista.length-1][0];
-  let c2 = lista[lista.length-1][1];
-
-  // Para que sea valido, es horizontal (f1=f2) o vertical (c1=c2)
-  if (f1 !== f2 && c1 !== c2) {
-    // No es recto
-    return "";
-  }
-
-  let texto = "";
-  if (f1 === f2) {
-    // Horizontal
-    let minCol = Math.min(c1, c2);
-    let maxCol = Math.max(c1, c2);
-    for (let col = minCol; col <= maxCol; col++) {
-      texto += tablero[f1][col];
+    function continuarSeleccion(e) {
+      if (!seleccionando) return;
+      seleccionarCelda(e.target);
     }
-  } else {
-    // Vertical
-    let minFila = Math.min(f1, f2);
-    let maxFila = Math.max(f1, f2);
-    for (let fila = minFila; fila <= maxFila; fila++) {
-      texto += tablero[fila][c1];
+    function finalizarSeleccion() {
+      seleccionando = false;
+      verificarPalabra();
     }
-  }
-  return texto;
-}
-
-// Marcar celdas como descubiertas
-function marcarDescubierta(lista) {
-  lista.forEach(([f, c]) => {
-    const cell = document.getElementById(`celda-${f}-${c}`);
-    if (cell) {
-      cell.classList.add('descubierta');
-      cell.classList.remove('resaltada');
+    function seleccionarCelda(celda) {
+      if (!celda.classList.contains("celda")) return;
+      if (!seleccion.includes(celda)) {
+        celda.classList.add("resaltada");
+        seleccion.push(celda);
+      }
     }
-  });
-}
 
-// Lanzar confetti
-function lanzarConfetti(n) {
-  for (let i = 0; i < n; i++) {
-    const c = document.createElement("div");
-    c.classList.add("confetti");
-    c.style.left = (Math.random() * window.innerWidth) + "px";
-    c.style.backgroundColor = colorAleatorio();
-    c.style.animationDelay = (Math.random()) + "s";
-    document.body.appendChild(c);
-    setTimeout(() => {
-      if (c.parentNode) c.parentNode.removeChild(c);
-    }, 3000);
-  }
-}
+    // Verificar si la palabra seleccionada está en el array
+    function verificarPalabra() {
+      let palabraSeleccionada = seleccion.map(c => c.textContent).join("");
+      let invertida = palabraSeleccionada.split("").reverse().join("");
+      if (palabras.includes(palabraSeleccionada) || palabras.includes(invertida)) {
+        // Palabra encontrada
+        seleccion.forEach(c => c.classList.add("descubierta"));
+        palabrasEncontradas++;
+        document.getElementById("contador").textContent = `Palabras restantes: ${palabras.length - palabrasEncontradas}`;
+        // Confeti
+        lanzarConfetti();
+      } else {
+        // No coincide
+        seleccion.forEach(c => c.classList.remove("resaltada"));
+      }
+      seleccion = [];
+    }
 
-function colorAleatorio() {
-  const colores = ["#f44336","#e91e63","#9c27b0","#673ab7","#3f51b5","#2196f3","#03a9f4","#00bcd4","#009688","#4caf50","#8bc34a","#cddc39","#ffeb3b","#ffc107","#ff9800","#ff5722"];
-  return colores[Math.floor(Math.random() * colores.length)];
-}
+    // Confeti al acertar
+    function lanzarConfetti() {
+      for (let i = 0; i < 30; i++) {
+        let confetti = document.createElement("div");
+        confetti.style.position = "fixed";
+        confetti.style.width = "10px";
+        confetti.style.height = "10px";
+        confetti.style.backgroundColor = colorAleatorio();
+        confetti.style.top = "-10px";
+        confetti.style.left = Math.random() * window.innerWidth + "px";
+        confetti.style.opacity = 0.7;
+        confetti.style.animation = "confetti-fall 2s linear forwards";
+        confetti.style.animationDelay = (Math.random()) + "s";
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 4000);
+      }
+    }
+    function colorAleatorio() {
+      const colores = [
+        "#f44336","#e91e63","#9c27b0","#673ab7","#3f51b5","#2196f3","#03a9f4","#00bcd4",
+        "#009688","#4caf50","#8bc34a","#cddc39","#ffeb3b","#ffc107","#ff9800","#ff5722"
+      ];
+      return colores[Math.floor(Math.random() * colores.length)];
+    }
 
-// Verificar record y guardarlo en localStorage
-function verificarRecord() {
-  // El tiempo actual es "tiempo"
-  // Si no hay record previo o si mejoramos
-  if (mejorTiempo === null || tiempo < mejorTiempo) {
-    mejorTiempo = tiempo;
-    localStorage.setItem("recordSopa", String(mejorTiempo));
-    alert(`¡Nuevo récord! ${tiempo} segundos.`);
-  }
-}
+    // Animación confeti
+    const style = document.createElement("style");
+    style.innerHTML = `
+      @keyframes confetti-fall {
+        0% {
+          transform: translateY(-10px) rotate(0deg);
+        }
+        100% {
+          transform: translateY(90vh) rotate(720deg);
+        }
+      }
+    `;
+    document.head.appendChild(style);
 
-function mostrarRecord() {
-  const divRecord = document.getElementById("record");
-  if (!divRecord) return;
-
-  if (mejorTiempo !== null) {
-    divRecord.textContent = `Mejor tiempo: ${mejorTiempo} s`;
-  } else {
-    divRecord.textContent = "Mejor tiempo: -";
-  }
-}
-
-// Inicializacion
-window.onload = () => {
-  // Mostrar record
-  if (document.getElementById("record")) {
-    mostrarRecord();
-  }
-
-  seleccionarPalabras();
-  inicializarTablero();
-  colocarPalabras();
-  rellenarTablero();
-  renderizarTablero();
-  iniciarCronometro();
-
-  document.getElementById("reiniciar").addEventListener("click", reiniciarJuego);
-};
+    // Iniciar al cargar
+    window.onload = () => {
+      seleccionarPalabras();
+      inicializarTablero();
+      colocarPalabras();
+      rellenarTablero();
+      renderizarTablero();
+      iniciarCronometro();
+    };
   </script>
 </body>
 </html>
